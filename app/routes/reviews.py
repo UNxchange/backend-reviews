@@ -1,6 +1,8 @@
 from fastapi import APIRouter, HTTPException, Query, Body, status, Depends
 from typing import List, Optional
 from bson import ObjectId
+from datetime import datetime
+
 
 from ..models import Review, ReviewCreate, ReviewUpdate
 from ..database import get_review_collection
@@ -13,15 +15,24 @@ router = APIRouter(
 
 collection = get_review_collection()
 
- # Crear una nueva reseña POST
+# Crear una nueva reseña POST
 @router.post("/", response_model=Review, status_code=status.HTTP_201_CREATED)
-async def create_review(review: ReviewCreate = Body(...),
-    current_user: TokenData = Depends(get_current_user) # <-- Dependencia de usuario autenticado
+async def create_review(
+    review: ReviewCreate = Body(...),
+    current_user: TokenData = Depends(get_current_user)
 ):
+    if not current_user.sub:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Usuario no autenticado correctamente"
+        )
+
     review_dict = review.dict(by_alias=True)
-    
-    review_dict["author_id"] = ObjectId()
-    review_dict["created_at"] = review_dict.get("created_at") or  __import__('datetime').datetime.utcnow()
+
+    # Guardamos el correo del usuario como author_id
+    review_dict["author_id"] = current_user.sub
+    review_dict["created_at"] = datetime.utcnow()
+
     result = await collection.insert_one(review_dict)
     new_review = await collection.find_one({"_id": result.inserted_id})
     return new_review
@@ -73,11 +84,10 @@ async def update_review(
         raise HTTPException(status_code=404, detail=f"Reseña con id {id} no encontrada")
 
     # Verificar si el autor es el mismo que el usuario loggeado
-    # if str(existing_review["author_id"]) != current_user.sub:
-    #     raise HTTPException(status_code=403, detail="No tienes permisos para editar esta reseña")
-    if current_user.role != "administrador" and str(existing_review["author_id"]) != current_user.sub:
-        raise HTTPException(status_code=403, detail="No tienes permisos para editar esta reseña")
+    if existing_review["author_id"] != current_user.sub:
+        raise HTTPException(status_code=403)
 
+    
     update_data = {k: v for k, v in review_update.dict(exclude_unset=True).items()}
     if not update_data:
         raise HTTPException(status_code=400, detail="No se enviaron datos para actualizar")
@@ -86,7 +96,27 @@ async def update_review(
     updated_review = await collection.find_one({"_id": ObjectId(id)})
     return updated_review
 
-# Eliminar reseña por ID (DELETE)
+
+
+# @router.delete("/{id}", status_code=status.HTTP_204_NO_CONTENT)
+# async def delete_review(
+#     id: str,
+#     current_user: TokenData = Depends(get_current_user)
+# ):
+#     if not ObjectId.is_valid(id):
+#         raise HTTPException(status_code=400, detail="ID inválido")
+
+#     review = await collection.find_one({"_id": ObjectId(id)})
+#     if not review:
+#         raise HTTPException(status_code=404, detail=f"Reseña con id {id} no encontrada")
+
+#     # Verificación: solo el autor puede eliminar
+#     if str(review["author_id"]) != current_user.sub:
+#         raise HTTPException(status_code=403, detail="No tienes permisos para eliminar esta reseña")
+
+#     await collection.delete_one({"_id": ObjectId(id)})
+#     return
+
 @router.delete("/{id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_review(
     id: str,
@@ -99,7 +129,7 @@ async def delete_review(
     if not review:
         raise HTTPException(status_code=404, detail=f"Reseña con id {id} no encontrada")
 
-    # Verificar si el usuario es el autor o tiene rol de administrador
+    # Verificación: autor o administrador
     is_author = str(review["author_id"]) == current_user.sub
     is_admin = current_user.role == "administrador"
 
