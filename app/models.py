@@ -34,7 +34,7 @@ class PyObjectId(str):
 # Modelo principal de la Reseña
 class Review(BaseModel):
     id: PyObjectId = Field(default_factory=PyObjectId, validation_alias="_id")
-    author_id: PyObjectId
+    author_id: str
     convocatoria_id: PyObjectId
     rating: int = Field(..., ge=1, le=5)
     content: str
