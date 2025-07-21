@@ -25,6 +25,10 @@ app.middleware("http")(prometheus_middleware)
 
 # Agrega el endpoint de métricas
 app.add_api_route("/metrics", prometheus_metrics, methods=["GET"])
+# Endpoint para Prometheus
+@app.get("/metrics")
+def metrics():
+    return prometheus_metrics()
 
 app.include_router(reviews.router)
 
