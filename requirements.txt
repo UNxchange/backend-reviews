@@ -5,3 +5,6 @@ pydantic[email]
 python-dotenv
 python-jose[cryptography]
 passlib[bcrypt]
+httpx
+pytest
+prometheus_client

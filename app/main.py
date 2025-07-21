@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from .routes import reviews
+from app.metrics import prometheus_middleware, prometheus_metrics
 
 
 app = FastAPI(
@@ -18,6 +19,12 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"]
 )
+
+# Agrega el middleware de Prometheus
+app.middleware("http")(prometheus_middleware)
+
+# Agrega el endpoint de métricas
+app.add_api_route("/metrics", prometheus_metrics, methods=["GET"])
 
 app.include_router(reviews.router)
 
