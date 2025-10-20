@@ -15,12 +15,12 @@ Este microservicio gestiona las reseñas de experiencias de movilidad académica
 
 ## 🛠 Tecnologías
 
-- **FastAPI 0.115.5** - Framework web moderno y rápido
-- **MongoDB con Motor 3.6.0** - Base de datos NoSQL con driver asíncrono
-- **Pydantic 2.10.3** - Validación de datos y serialización
-- **Python 3.12+** - Lenguaje de programación
-- **JWT (python-jose)** - Autenticación y autorización
-- **Uvicorn** - Servidor ASGI de alto rendimiento
+- **Spring Boot 3.2.0** - Framework web moderno y robusto
+- **Spring Data MongoDB** - Integración con MongoDB
+- **Spring Security** - Autenticación y autorización
+- **Java 17** - Lenguaje de programación
+- **JWT (jjwt)** - Autenticación y autorización
+- **Maven** - Gestión de dependencias y construcción
 
 ## 📋 Endpoints Principales
 
@@ -145,22 +145,15 @@ Verifica el estado del servicio.
 
 ## ⚙️ Configuración
 
-### 1. Instalar dependencias
+### 1. Prerrequisitos
 
-```bash
-cd backend-reviews
-pip install -r requirements.txt
-```
+- **Java 17** o superior
+- **Maven 3.6+**
+- **MongoDB** ejecutándose localmente o remotamente
 
 ### 2. Configurar variables de entorno
 
-Crea un archivo `.env` basado en `.env.example`:
-
-```bash
-cp .env.example .env
-```
-
-Edita el archivo `.env`:
+Crea un archivo `.env` basado en `.env.example` o configura las variables de entorno:
 
 ```env
 # MongoDB
@@ -171,30 +164,36 @@ DATABASE_NAME=unxchange_reviews
 SECRET_KEY=your-super-secret-key-change-this-in-production-unxchange-2025
 ALGORITHM=HS256
 
-# Server
-PORT=8003
-HOST=0.0.0.0
-DEBUG=false
-
 # CORS
 CORS_ORIGINS=http://localhost,http://localhost:80,http://localhost:3000
 ```
 
-### 3. Ejecutar la aplicación
+### 3. Compilar y ejecutar la aplicación
 
 #### Desarrollo
 ```bash
-uvicorn app.main:app --reload --port 8003
+# Compilar el proyecto
+mvn clean compile
+
+# Ejecutar en modo desarrollo
+mvn spring-boot:run
 ```
 
 #### Producción
 ```bash
-uvicorn app.main:app --host 0.0.0.0 --port 8003
+# Crear JAR ejecutable
+mvn clean package
+
+# Ejecutar el JAR
+java -jar target/reviews-service-1.0.1.jar
 ```
 
 #### Con Docker
 ```bash
+# Crear imagen Docker
 docker build -t reviews-service .
+
+# Ejecutar contenedor
 docker run -p 8003:8003 --env-file .env reviews-service
 ```
 
@@ -273,54 +272,77 @@ Las reseñas están vinculadas a convocatorias mediante `convocatoria_id`:
 ## 🏗️ Arquitectura
 
 ```
-backend-reviews/
-├── app/
-│   ├── __init__.py           # Módulo principal
-│   ├── main.py               # Aplicación FastAPI
-│   ├── database.py           # Configuración MongoDB
-│   ├── security.py           # Autenticación JWT
-│   ├── models.py             # Modelos Pydantic
-│   ├── crud/
-│   │   ├── __init__.py
-│   │   └── reviews.py        # Operaciones CRUD
-│   └── routes/
-│       └── reviews.py        # Endpoints API
-├── .env.example              # Plantilla de configuración
+reviews-service/
+├── src/main/java/com/unxchange/reviews/
+│   ├── ReviewsServiceApplication.java    # Aplicación principal Spring Boot
+│   ├── config/
+│   │   ├── SecurityConfig.java          # Configuración de seguridad
+│   │   ├── CorsConfig.java              # Configuración CORS
+│   │   └── OpenApiConfig.java           # Configuración Swagger/OpenAPI
+│   ├── controller/
+│   │   ├── ReviewController.java        # Endpoints API de reseñas
+│   │   └── RootController.java          # Endpoint raíz
+│   ├── dto/
+│   │   ├── ReviewCreateDto.java         # DTO para crear reseñas
+│   │   ├── ReviewUpdateDto.java         # DTO para actualizar reseñas
+│   │   ├── ReviewListResponseDto.java   # DTO para respuesta paginada
+│   │   └── ReviewStatisticsDto.java     # DTO para estadísticas
+│   ├── exception/
+│   │   ├── ReviewNotFoundException.java  # Excepción reseña no encontrada
+│   │   ├── UnauthorizedException.java   # Excepción sin permisos
+│   │   └── GlobalExceptionHandler.java  # Manejador global de excepciones
+│   ├── model/
+│   │   └── Review.java                  # Entidad de reseña
+│   ├── repository/
+│   │   └── ReviewRepository.java        # Repositorio MongoDB
+│   ├── security/
+│   │   ├── JwtAuthenticationFilter.java # Filtro JWT
+│   │   └── UserPrincipal.java          # Principal del usuario
+│   └── service/
+│       └── ReviewService.java           # Lógica de negocio
+├── src/main/resources/
+│   └── application.yml                  # Configuración de la aplicación
+├── pom.xml                              # Dependencias Maven
+├── .env.example                         # Plantilla de configuración
 ├── .gitignore
-├── CHANGELOG.md              # Historial de cambios
-├── Dockerfile                # Imagen Docker
-├── README.md                 # Este archivo
-└── requirements.txt          # Dependencias Python
+├── CHANGELOG.md                         # Historial de cambios
+├── Dockerfile                           # Imagen Docker
+└── README.md                            # Este archivo
 ```
 
 ### Separación de Capas
 
-1. **Routes** (`app/routes/`): Endpoints HTTP, validación de requests
-2. **CRUD** (`app/crud/`): Lógica de negocio y acceso a datos
-3. **Models** (`app/models.py`): Validación y serialización con Pydantic
-4. **Database** (`app/database.py`): Conexión y configuración de MongoDB
-5. **Security** (`app/security.py`): Autenticación y autorización
+1. **Controller** (`controller/`): Endpoints HTTP, validación de requests
+2. **Service** (`service/`): Lógica de negocio
+3. **Repository** (`repository/`): Acceso a datos con Spring Data MongoDB
+4. **Model** (`model/`): Entidades de dominio
+5. **DTO** (`dto/`): Objetos de transferencia de datos
+6. **Security** (`security/`): Autenticación y autorización JWT
+7. **Config** (`config/`): Configuraciones de Spring
 
 ## 🧪 Testing
 
 ### Ejecutar pruebas
 
 ```bash
-# Instalar dependencias de testing
-pip install pytest pytest-asyncio httpx
+# Ejecutar todas las pruebas
+mvn test
 
-# Ejecutar tests
-pytest tests/ -v
+# Ejecutar pruebas con reporte de cobertura
+mvn test jacoco:report
 
-# Con coverage
-pytest tests/ --cov=app --cov-report=html
+# Ejecutar solo pruebas unitarias
+mvn test -Dtest="*UnitTest"
+
+# Ejecutar solo pruebas de integración
+mvn test -Dtest="*IntegrationTest"
 ```
 
 ### Probar endpoints manualmente
 
 Accede a la documentación interactiva:
 - Swagger UI: http://localhost:8003/docs
-- ReDoc: http://localhost:8003/redoc
+- API Docs: http://localhost:8003/api-docs
 
 ## 📊 Monitoreo
 
@@ -332,14 +354,16 @@ curl http://localhost:8003/reviews/health/check
 
 ### Logs
 
-El servicio usa el logging estándar de FastAPI/Uvicorn:
+El servicio usa el sistema de logging de Spring Boot:
 
 ```bash
-# Logs detallados
-uvicorn app.main:app --log-level debug
+# Ver logs en tiempo real
+tail -f logs/reviews-service.log
 
-# Logs en archivo
-uvicorn app.main:app --log-config logging.conf
+# Configurar nivel de logs en application.yml
+logging:
+  level:
+    com.unxchange: DEBUG
 ```
 
 ## 🚢 Despliegue
@@ -350,7 +374,7 @@ Agrega al `docker-compose.yml`:
 
 ```yaml
 reviews-service:
-  build: ./backend-reviews
+  build: ./reviews-service
   ports:
     - "8003:8003"
   environment:
@@ -396,21 +420,29 @@ Los logs se muestran en consola con información sobre:
 ### Estructura de archivos
 
 ```plaintext
-app/
-├── main.py                 # Aplicación FastAPI
-├── routes/
-│   └── reviews.py          # Endpoints de reseñas
-├── models.py               # Modelos Pydantic
-├── database.py             # Conexión a MongoDB
-├── security.py             # Autenticación y roles
-└── tests/                  # Pruebas unitarias
+src/main/java/com/unxchange/reviews/
+├── ReviewsServiceApplication.java  # Aplicación Spring Boot
+├── controller/
+│   └── ReviewController.java       # Endpoints de reseñas
+├── model/
+│   └── Review.java                 # Entidad de reseña
+├── service/
+│   └── ReviewService.java          # Lógica de negocio
+├── repository/
+│   └── ReviewRepository.java       # Repositorio MongoDB
+├── security/
+│   └── JwtAuthenticationFilter.java # Autenticación JWT
+└── config/
+    └── SecurityConfig.java         # Configuración de seguridad
 ```
 
 ### Agregar nuevos campos o funcionalidades
 
-1. Modificar o crear modelos en `models.py`
-2. Actualizar lógica en `routes/reviews.py`
-3. Agregar pruebas en `tests/`
+1. Modificar entidades en `model/`
+2. Actualizar DTOs en `dto/`
+3. Modificar servicios en `service/`
+4. Actualizar controladores en `controller/`
+5. Agregar pruebas en `src/test/java/`
 
 ## 📜 Licencia
 

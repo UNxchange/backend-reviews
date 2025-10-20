@@ -1,0 +1,44 @@
+server:
+  port: 8003
+
+spring:
+  application:
+    name: reviews-service
+  
+  data:
+    mongodb:
+      uri: ${MONGO_URI:mongodb://localhost:27017}
+      database: ${DATABASE_NAME:unxchange_reviews}
+  
+  security:
+    jwt:
+      secret-key: ${SECRET_KEY:your-super-secret-key-change-this-in-production-unxchange-2025}
+      algorithm: ${ALGORITHM:HS256}
+
+# CORS Configuration
+cors:
+  allowed-origins: ${CORS_ORIGINS:http://localhost,http://localhost:80,http://localhost:3000,http://localhost:8080}
+
+# Logging
+logging:
+  level:
+    com.unxchange: DEBUG
+    org.springframework.security: DEBUG
+
+# Actuator endpoints
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: always
+
+# API Documentation
+springdoc:
+  api-docs:
+    path: /api-docs
+  swagger-ui:
+    path: /docs
+    operationsSorter: method
